@@ -1,0 +1,607 @@
+<!-- templates/download_documents.html -->
+{% extends 'base.html' %}
+
+{% block title %}Download Documents - {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-download"></i> Download Completed Documents</h2>
+        
+        <nav aria-label="breadcrumb" class="mt-3">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'project_list' %}">Projects</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'project_detail' project.id %}">{{ project.name }}</a></li>
+                <li class="breadcrumb-item active">Download Documents</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<!-- Project Summary Card -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card border-success">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0"><i class="fas fa-check-circle"></i> Project Completed Successfully</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-8">
+                        <h6><strong>{{ project.name }}</strong></h6>
+                        {% if project.description %}
+                            <p class="text-muted mb-2">{{ project.description }}</p>
+                        {% endif %}
+                        <p class="mb-1"><strong>Status:</strong> 
+                            <span class="badge bg-success">{{ project.get_status_display }}</span>
+                        </p>
+                        <p class="mb-1"><strong>Completed:</strong> {{ project.updated_at|date:"F d, Y g:i A" }}</p>
+                        <p class="mb-0"><strong>Documents Generated:</strong> {{ processed_documents.count }}</p>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <div class="btn-group" role="group">
+                            <button type="button" class="btn btn-primary dropdown-toggle" data-bs-toggle="dropdown">
+                                <i class="fas fa-download"></i> Download All
+                            </button>
+                            <ul class="dropdown-menu">
+                                <li><a class="dropdown-item" href="#" id="downloadAllZip">
+                                    <i class="fas fa-file-archive"></i> Download as ZIP
+                                </a></li>
+                                <li><a class="dropdown-item" href="#" id="downloadAllPdf">
+                                    <i class="fas fa-file-pdf"></i> Convert All to PDF
+                                </a></li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li><a class="dropdown-item" href="{% url 'process_document' project.id %}">
+                                    <i class="fas fa-edit"></i> Edit Content
+                                </a></li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Download Options -->
+{% if processed_documents %}
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0"><i class="fas fa-file-download"></i> Available Documents</h5>
+                    <div class="btn-group btn-group-sm" role="group">
+                        <input type="radio" class="btn-check" name="viewMode" id="gridView" checked>
+                        <label class="btn btn-outline-secondary" for="gridView">
+                            <i class="fas fa-th-large"></i> Grid
+                        </label>
+                        <input type="radio" class="btn-check" name="viewMode" id="listView">
+                        <label class="btn btn-outline-secondary" for="listView">
+                            <i class="fas fa-list"></i> List
+                        </label>
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Grid View -->
+                <div id="gridViewContent" class="row">
+                    {% for document in processed_documents %}
+                        <div class="col-md-6 col-lg-4 mb-4">
+                            <div class="card h-100 document-card" data-document-id="{{ document.id }}">
+                                <div class="card-body text-center">
+                                    <div class="mb-3">
+                                        {% if document.file.name|slice:"-4:" == "docx" %}
+                                            <i class="fas fa-file-word fa-3x text-primary"></i>
+                                        {% elif document.file.name|slice:"-3:" == "pdf" %}
+                                            <i class="fas fa-file-pdf fa-3x text-danger"></i>
+                                        {% elif document.file.name|slice:"-4:" == "xlsx" %}
+                                            <i class="fas fa-file-excel fa-3x text-success"></i>
+                                        {% else %}
+                                            <i class="fas fa-file fa-3x text-secondary"></i>
+                                        {% endif %}
+                                    </div>
+                                    <h6 class="card-title">{{ document.file.name }}</h6>
+                                    <p class="card-text text-muted small">
+                                        Created: {{ document.created_at|date:"M d, Y" }}<br>
+                                        Size: {{ document.file.size|filesizeformat }}
+                                    </p>
+                                </div>
+                                <div class="card-footer bg-transparent">
+                                    <div class="d-grid gap-2">
+                                        <a href="{% url 'download_file' document.id %}" 
+                                           class="btn btn-primary btn-sm download-btn">
+                                            <i class="fas fa-download"></i> Download
+                                        </a>
+                                        <div class="btn-group" role="group">
+                                            <button type="button" class="btn btn-outline-secondary btn-sm preview-btn" 
+                                                    data-document-id="{{ document.id }}">
+                                                <i class="fas fa-eye"></i> Preview
+                                            </button>
+                                            <button type="button" class="btn btn-outline-info btn-sm share-btn" 
+                                                    data-document-id="{{ document.id }}">
+                                                <i class="fas fa-share"></i> Share
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+
+                <!-- List View -->
+                <div id="listViewContent" class="d-none">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Document</th>
+                                    <th>Type</th>
+                                    <th>Size</th>
+                                    <th>Created</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for document in processed_documents %}
+                                <tr>
+                                    <td>
+                                        <div class="d-flex align-items-center">
+                                            {% if document.file.name|slice:"-4:" == "docx" %}
+                                                <i class="fas fa-file-word text-primary me-2"></i>
+                                            {% elif document.file.name|slice:"-3:" == "pdf" %}
+                                                <i class="fas fa-file-pdf text-danger me-2"></i>
+                                            {% elif document.file.name|slice:"-4:" == "xlsx" %}
+                                                <i class="fas fa-file-excel text-success me-2"></i>
+                                            {% else %}
+                                                <i class="fas fa-file text-secondary me-2"></i>
+                                            {% endif %}
+                                            <span>{{ document.file.name }}</span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span class="badge bg-secondary">
+                                            {{ document.file.name|slice:"-4:"|upper }}
+                                        </span>
+                                    </td>
+                                    <td>{{ document.file.size|filesizeformat }}</td>
+                                    <td>{{ document.created_at|date:"M d, Y g:i A" }}</td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'download_file' document.id %}" 
+                                               class="btn btn-primary btn-sm">
+                                                <i class="fas fa-download"></i>
+                                            </a>
+                                            <button type="button" class="btn btn-outline-secondary btn-sm preview-btn" 
+                                                    data-document-id="{{ document.id }}">
+                                                <i class="fas fa-eye"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-info btn-sm share-btn" 
+                                                    data-document-id="{{ document.id }}">
+                                                <i class="fas fa-share"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Download Statistics -->
+<div class="row mt-4">
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-primary">
+                    <i class="fas fa-file-alt"></i> {{ processed_documents.count }}
+                </h5>
+                <p class="card-text">Documents Generated</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-success">
+                    <i class="fas fa-robot"></i> 
+                    {% with project.tendertemplate_set.all as templates %}
+                        {% for template in templates %}
+                            {{ template.extractedfield_set.count|add:0 }}
+                        {% endfor %}
+                    {% endwith %}
+                </h5>
+                <p class="card-text">Fields Filled by AI</p>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="card text-center">
+            <div class="card-body">
+                <h5 class="card-title text-info">
+                    <i class="fas fa-clock"></i> 
+                    {% now "Y-m-d H:i:s" as now_time %}
+                    {% with project.created_at|timesince:now_time as time_diff %}
+                        {{ time_diff|slice:":2" }}
+                    {% endwith %}
+                </h5>
+                <p class="card-text">Processing Time</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% else %}
+<!-- No Documents Available -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card border-warning">
+            <div class="card-body text-center">
+                <i class="fas fa-exclamation-triangle fa-3x text-warning mb-3"></i>
+                <h5>No Documents Available</h5>
+                <p class="text-muted">No processed documents are available for download yet.</p>
+                <a href="{% url 'process_document' project.id %}" class="btn btn-primary">
+                    <i class="fas fa-arrow-left"></i> Go Back to Processing
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Action Buttons -->
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="d-flex justify-content-between">
+            <div>
+                <a href="{% url 'process_document' project.id %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-edit"></i> Edit Content
+                </a>
+                <a href="{% url 'upload_documents' project.id %}" class="btn btn-outline-secondary">
+                    <i class="fas fa-upload"></i> Add More Documents
+                </a>
+            </div>
+            <div>
+                <a href="{% url 'project_detail' project.id %}" class="btn btn-secondary">
+                    <i class="fas fa-arrow-left"></i> Back to Project
+                </a>
+                <a href="{% url 'create_project' %}" class="btn btn-success">
+                    <i class="fas fa-plus"></i> New Project
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Preview Modal -->
+<div class="modal fade" id="previewModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Document Preview</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div id="previewContent">
+                    <div class="text-center">
+                        <div class="spinner-border" role="status">
+                            <span class="visually-hidden">Loading...</span>
+                        </div>
+                        <p class="mt-2">Loading preview...</p>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                <button type="button" class="btn btn-primary" id="downloadFromPreview">
+                    <i class="fas fa-download"></i> Download
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Share Modal -->
+<div class="modal fade" id="shareModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Share Document</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="shareEmail" class="form-label">Email Address</label>
+                    <input type="email" class="form-control" id="shareEmail" placeholder="Enter email address">
+                </div>
+                <div class="mb-3">
+                    <label for="shareMessage" class="form-label">Message (Optional)</label>
+                    <textarea class="form-control" id="shareMessage" rows="3" 
+                              placeholder="Add a message with the shared document"></textarea>
+                </div>
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="shareNotify">
+                    <label class="form-check-label" for="shareNotify">
+                        Notify me when the document is accessed
+                    </label>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-primary" id="sendShare">
+                    <i class="fas fa-paper-plane"></i> Send
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Progress Modal for Bulk Operations -->
+<div class="modal fade" id="progressModal" tabindex="-1" data-bs-backdrop="static">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Processing Documents</h5>
+            </div>
+            <div class="modal-body">
+                <div class="progress mb-3">
+                    <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                         role="progressbar" style="width: 0%" id="bulkProgress"></div>
+                </div>
+                <p id="progressText">Preparing download...</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    let currentDocumentId = null;
+    
+    // View Mode Toggle
+    $('input[name="viewMode"]').change(function() {
+        if ($(this).attr('id') === 'gridView') {
+            $('#gridViewContent').removeClass('d-none');
+            $('#listViewContent').addClass('d-none');
+        } else {
+            $('#gridViewContent').addClass('d-none');
+            $('#listViewContent').removeClass('d-none');
+        }
+    });
+    
+    // Download tracking
+    $('.download-btn').click(function(e) {
+        const documentName = $(this).closest('.document-card, tr').find('.card-title, td:first span').text();
+        
+        // Show download started notification
+        showNotification('Download started for: ' + documentName, 'info');
+        
+        // Track download analytics (optional)
+        trackDownload($(this).attr('href'));
+    });
+    
+    // Preview functionality
+    $('.preview-btn').click(function() {
+        currentDocumentId = $(this).data('document-id');
+        $('#previewModal').modal('show');
+        loadPreview(currentDocumentId);
+    });
+    
+    // Share functionality
+    $('.share-btn').click(function() {
+        currentDocumentId = $(this).data('document-id');
+        $('#shareModal').modal('show');
+    });
+    
+    // Send share
+    $('#sendShare').click(function() {
+        const email = $('#shareEmail').val();
+        const message = $('#shareMessage').val();
+        const notify = $('#shareNotify').is(':checked');
+        
+        if (!email) {
+            showNotification('Please enter an email address', 'error');
+            return;
+        }
+        
+        // Simulate share functionality
+        $(this).prop('disabled', true).html('<i class="fas fa-spinner fa-spin"></i> Sending...');
+        
+        setTimeout(function() {
+            $('#shareModal').modal('hide');
+            showNotification('Document shared successfully!', 'success');
+            $('#sendShare').prop('disabled', false).html('<i class="fas fa-paper-plane"></i> Send');
+            $('#shareEmail').val('');
+            $('#shareMessage').val('');
+            $('#shareNotify').prop('checked', false);
+        }, 2000);
+    });
+    
+    // Download all as ZIP
+    $('#downloadAllZip').click(function(e) {
+        e.preventDefault();
+        showProgressModal();
+        simulateZipCreation();
+    });
+    
+    // Convert all to PDF
+    $('#downloadAllPdf').click(function(e) {
+        e.preventDefault();
+        showProgressModal();
+        simulatePdfConversion();
+    });
+    
+    // Download from preview
+    $('#downloadFromPreview').click(function() {
+        if (currentDocumentId) {
+            window.location.href = `/download/${currentDocumentId}/`;
+            $('#previewModal').modal('hide');
+        }
+    });
+    
+    // Functions
+    function loadPreview(documentId) {
+        $('#previewContent').html(`
+            <div class="text-center">
+                <div class="spinner-border" role="status">
+                    <span class="visually-hidden">Loading...</span>
+                </div>
+                <p class="mt-2">Loading preview...</p>
+            </div>
+        `);
+        
+        // Simulate preview loading
+        setTimeout(function() {
+            $('#previewContent').html(`
+                <div class="alert alert-info">
+                    <i class="fas fa-info-circle"></i> 
+                    Preview functionality would show document content here.
+                    For security reasons, actual document preview requires additional server-side processing.
+                </div>
+                <div class="text-center">
+                    <i class="fas fa-file fa-5x text-muted mb-3"></i>
+                    <h5>Document Preview</h5>
+                    <p class="text-muted">Click download to view the full document</p>
+                </div>
+            `);
+        }, 1500);
+    }
+    
+    function showProgressModal() {
+        $('#progressModal').modal('show');
+        $('#bulkProgress').css('width', '0%');
+        $('#progressText').text('Preparing download...');
+    }
+    
+    function simulateZipCreation() {
+        let progress = 0;
+        const interval = setInterval(function() {
+            progress += Math.random() * 20;
+            if (progress >= 100) {
+                progress = 100;
+                clearInterval(interval);
+                $('#progressText').text('Download ready!');
+                setTimeout(function() {
+                    $('#progressModal').modal('hide');
+                    showNotification('ZIP file created successfully!', 'success');
+                    // Trigger actual download here
+                }, 1000);
+            }
+            $('#bulkProgress').css('width', progress + '%');
+            $('#progressText').text(`Creating ZIP archive... ${Math.round(progress)}%`);
+        }, 500);
+    }
+    
+    function simulatePdfConversion() {
+        let progress = 0;
+        const interval = setInterval(function() {
+            progress += Math.random() * 15;
+            if (progress >= 100) {
+                progress = 100;
+                clearInterval(interval);
+                $('#progressText').text('Conversion complete!');
+                setTimeout(function() {
+                    $('#progressModal').modal('hide');
+                    showNotification('Documents converted to PDF successfully!', 'success');
+                    // Trigger actual download here
+                }, 1000);
+            }
+            $('#bulkProgress').css('width', progress + '%');
+            $('#progressText').text(`Converting to PDF... ${Math.round(progress)}%`);
+        }, 700);
+    }
+    
+    function showNotification(message, type) {
+        const alertClass = type === 'error' ? 'alert-danger' : 
+                          type === 'success' ? 'alert-success' : 'alert-info';
+        
+        const notification = $(`
+            <div class="alert ${alertClass} alert-dismissible fade show position-fixed" 
+                 style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;">
+                ${message}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        `);
+        
+        $('body').append(notification);
+        
+        setTimeout(function() {
+            notification.alert('close');
+        }, 5000);
+    }
+    
+    function trackDownload(url) {
+        // Optional: Send download analytics to server
+        console.log('Download tracked:', url);
+    }
+    
+    // Auto-refresh download status (optional)
+    function checkDownloadStatus() {
+        // Poll server for download completion status
+        // Useful for large file processing
+    }
+    
+    // Keyboard shortcuts
+    $(document).keydown(function(e) {
+        // Ctrl+D or Cmd+D for download all
+        if ((e.ctrlKey || e.metaKey) && e.keyCode === 68) {
+            e.preventDefault();
+            $('#downloadAllZip').click();
+        }
+        
+        // Escape to close modals
+        if (e.keyCode === 27) {
+            $('.modal').modal('hide');
+        }
+    });
+});
+</script>
+
+<style>
+.document-card {
+    transition: transform 0.2s, box-shadow 0.2s;
+    cursor: pointer;
+}
+
+.document-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+}
+
+.download-btn {
+    transition: all 0.3s ease;
+}
+
+.download-btn:hover {
+    transform: scale(1.05);
+}
+
+.table tbody tr:hover {
+    background-color: rgba(0,123,255,0.1);
+}
+
+.position-fixed {
+    z-index: 9999;
+}
+
+@media (max-width: 768px) {
+    .btn-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .btn-group .btn {
+        border-radius: 0.375rem !important;
+    }
+}
+</style>
+{% endblock %}

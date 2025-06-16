@@ -1,0 +1,156 @@
+<!-- templates/process_document.html -->
+{% extends 'base.html' %}
+
+{% block title %}Process Documents - {{ project.name }}{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <h2><i class="fas fa-cogs"></i> Process Documents for "{{ project.name }}"</h2>
+        
+        <nav aria-label="breadcrumb" class="mt-3">
+            <ol class="breadcrumb">
+                <li class="breadcrumb-item"><a href="{% url 'project_list' %}">Projects</a></li>
+                <li class="breadcrumb-item"><a href="{% url 'project_detail' project.id %}">{{ project.name }}</a></li>
+                <li class="breadcrumb-item active">Process Documents</li>
+            </ol>
+        </nav>
+    </div>
+</div>
+
+<div class="row mt-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <h5><i class="fas fa-robot"></i> AI Content Generation</h5>
+                <div>
+                    <form id="generateForm" enctype="application/x-www-form-urlencoded" method="post" action="{% url 'process_document' project.id %}" style="display: inline;">
+                        {% csrf_token %}
+                        <button type="submit" name="action" value="generate_content" 
+                                class="btn btn-primary" id="generateBtn">
+                            <i class="fas fa-magic"></i> Generate AI Content
+                        </button>
+                    </form>
+                </div>
+            </div>
+            <div class="card-body">
+                <div class="progress-bar-container">
+                    <div class="progress" style="display: none;" id="progressBar">
+                        <div class="progress-bar progress-bar-striped progress-bar-animated" 
+                             role="progressbar" style="width: 0%"></div>
+                    </div>
+                </div>
+                
+                <p>Found {{ fields|length }} fields across {{ templates.count }} template(s). 
+                   Click "Generate AI Content" to automatically fill all fields using your reference documents.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if fields %}
+<div class="row mt-4">
+    <div class="col-12">
+        <form method="post" id="fieldsForm" action="{% url 'process_document' project.id %}">
+            {% csrf_token %}
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-edit"></i> Review and Edit Generated Content</h5>
+                </div>
+                <div class="card-body">
+                    {% for field in fields %}
+                        <div class="field-editor" data-field-id="{{ field.id }}">
+                            <div class="row">
+                                <div class="col-md-3">
+                                    <strong>{{ field.field_name }}</strong>
+                                    <br><small class="text-muted">{{ field.template_name }}</small>
+                                    <br><small class="badge bg-secondary">{{ field.field_type }}</small>
+                                </div>
+                                <div class="col-md-9">
+                                    <textarea name="field_{{ field.id }}" 
+                                              class="form-control field-content" 
+                                              rows="4" 
+                                              placeholder="Generated content will appear here...">{{ field.generated_content }}</textarea>
+                                    <div class="mt-2">
+                                        <button type="button" class="btn btn-sm btn-outline-primary regenerate-btn" 
+                                                data-field-id="{{ field.id }}">
+                                            <i class="fas fa-redo"></i> Regenerate
+                                        </button>
+                                        <button type="button" class="btn btn-sm btn-outline-success save-field-btn" 
+                                                data-field-id="{{ field.id }}">
+                                            <i class="fas fa-save"></i> Save
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+                <div class="card-footer">
+                    <button type="submit" name="action" value="save_and_fill" class="btn btn-success btn-lg">
+                        <i class="fas fa-file-download"></i> Save & Fill Documents
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+{% endif %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    // Handle generate button click
+    // $('#generateBtn').click(function() {
+    //     $(this).prop('disabled', true);
+    //     $('#progressBar').show();
+    //     $('.progress-bar').css('width', '100%');
+    // });
+    
+    // Handle individual field save
+    $('.save-field-btn').click(function() {
+        var fieldId = $(this).data('field-id');
+        var content = $('textarea[name="field_' + fieldId + '"]').val();
+        
+        $.ajax({
+            url: '{% url "ajax_update_field" %}',
+            method: 'POST',
+            data: {
+                'field_id': fieldId,
+                'content': content
+            },
+            success: function(response) {
+                if (response.success) {
+                    // Show success feedback
+                    var btn = $('button[data-field-id="' + fieldId + '"].save-field-btn');
+                    btn.removeClass('btn-outline-success').addClass('btn-success');
+                    setTimeout(function() {
+                        btn.removeClass('btn-success').addClass('btn-outline-success');
+                    }, 2000);
+                }
+            }
+        });
+    });
+    
+    // Auto-save on content change (debounced)
+    var saveTimeout;
+    $('.field-content').on('input', function() {
+        var fieldId = $(this).closest('.field-editor').data('field-id');
+        var content = $(this).val();
+        
+        clearTimeout(saveTimeout);
+        saveTimeout = setTimeout(function() {
+            $.ajax({
+                url: '{% url "ajax_update_field" %}',
+                method: 'POST',
+                data: {
+                    'field_id': fieldId,
+                    'content': content
+                }
+            });
+        }, 2000);
+    });
+});
+</script>
+{% endblock %}

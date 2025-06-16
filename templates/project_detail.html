@@ -1,0 +1,486 @@
+<!-- templates/project_detail.html -->
+{% extends 'base.html' %}
+
+{% block title %}{{ project.name }} - Project Details{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Project Header -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <h2>{{ project.name }}</h2>
+                    <nav aria-label="breadcrumb">
+                        <ol class="breadcrumb">
+                            <li class="breadcrumb-item"><a href="{% url 'project_list' %}">Projects</a></li>
+                            <li class="breadcrumb-item active">{{ project.name }}</li>
+                        </ol>
+                    </nav>
+                </div>
+                <div>
+                    {% if project.status == 'draft' %}
+                        <a href="{% url 'upload_documents' project.id %}" class="btn btn-primary">
+                            <i class="fas fa-upload"></i> Upload Documents
+                        </a>
+                    {% elif project.status == 'processing' %}
+                        <a href="{% url 'process_document' project.id %}" class="btn btn-warning">
+                            <i class="fas fa-cogs"></i> View Processing
+                        </a>
+                    {% elif project.status == 'completed' %}
+                        <a href="{% url 'download_documents' project.id %}" class="btn btn-success">
+                            <i class="fas fa-download"></i> Download Documents
+                        </a>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Project Status Card -->
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-body">
+                    <div class="row align-items-center">
+                        <div class="col-md-8">
+                            <h5 class="mb-2">Project Status</h5>
+                            {% if project.description %}
+                                <p class="text-muted mb-3">{{ project.description }}</p>
+                            {% endif %}
+                            <div class="row">
+                                <div class="col-sm-6">
+                                    <p class="mb-1"><strong>Created:</strong> {{ project.created_at|date:"M d, Y" }}</p>
+                                    <p class="mb-1"><strong>Last Updated:</strong> {{ project.updated_at|date:"M d, Y" }}</p>
+                                </div>
+                                <div class="col-sm-6">
+                                    <p class="mb-1"><strong>Templates:</strong> {{ templates.count }}</p>
+                                    <p class="mb-1"><strong>References:</strong> {{ references.count }}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 text-center">
+                            {% if project.status == 'draft' %}
+                                <span class="badge bg-secondary fs-6 p-3">
+                                    <i class="fas fa-edit"></i> Draft
+                                </span>
+                            {% elif project.status == 'processing' %}
+                                <span class="badge bg-warning fs-6 p-3">
+                                    <i class="fas fa-spinner fa-spin"></i> Processing
+                                </span>
+                            {% elif project.status == 'completed' %}
+                                <span class="badge bg-success fs-6 p-3">
+                                    <i class="fas fa-check-circle"></i> Completed
+                                </span>
+                            {% elif project.status == 'error' %}
+                                <span class="badge bg-danger fs-6 p-3">
+                                    <i class="fas fa-exclamation-triangle"></i> Error
+                                </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Documents Section -->
+    <div class="row">
+        <!-- Templates -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="fas fa-file-alt"></i> Templates ({{ templates.count }})</h6>
+                    <a href="{% url 'upload_documents' project.id %}" class="btn btn-sm btn-outline-primary">
+                        <i class="fas fa-plus"></i>
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if templates %}
+                        {% for template in templates %}
+                            <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+                                <div>
+                                    <div class="fw-bold">{{ template.original_filename|truncatechars:20 }}</div>
+                                    <small class="text-muted">{{ template.created_at|date:"M d" }}</small>
+                                </div>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#" onclick="downloadFile('template', '{{ template.id }}')">
+                                            <i class="fas fa-download"></i> Download
+                                        </a></li>
+                                        <li><a class="dropdown-item text-danger" href="#" onclick="deleteFile('template', '{{ template.id }}')">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-file-alt fa-3x mb-3 opacity-50"></i>
+                            <p>No templates uploaded</p>
+                            <a href="{% url 'upload_documents' project.id %}" class="btn btn-sm btn-primary">
+                                Upload Templates
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- References -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="fas fa-book"></i> References ({{ references.count }})</h6>
+                    <a href="{% url 'upload_documents' project.id %}" class="btn btn-sm btn-outline-info">
+                        <i class="fas fa-plus"></i>
+                    </a>
+                </div>
+                <div class="card-body">
+                    {% if references %}
+                        {% for reference in references %}
+                            <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+                                <div>
+                                    <div class="fw-bold">{{ reference.title|truncatechars:20 }}</div>
+                                    <small class="text-muted">{{ reference.created_at|date:"M d" }}</small>
+                                </div>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary" data-bs-toggle="dropdown">
+                                        <i class="fas fa-ellipsis-v"></i>
+                                    </button>
+                                    <ul class="dropdown-menu">
+                                        <li><a class="dropdown-item" href="#" onclick="downloadFile('reference', '{{ reference.id }}')">
+                                            <i class="fas fa-download"></i> Download
+                                        </a></li>
+                                        <li><a class="dropdown-item text-danger" href="#" onclick="deleteFile('reference', '{{ reference.id }}')">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </a></li>
+                                    </ul>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-book fa-3x mb-3 opacity-50"></i>
+                            <p>No references added</p>
+                            <small class="d-block mb-3">Add past tender responses for better AI results</small>
+                            <a href="{% url 'upload_documents' project.id %}" class="btn btn-sm btn-info">
+                                Upload References
+                            </a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Completed Documents -->
+        <div class="col-md-4 mb-4">
+            <div class="card h-100">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <h6 class="mb-0"><i class="fas fa-download"></i> Completed ({{ processed_documents.count }})</h6>
+                    {% if processed_documents %}
+                        <a href="{% url 'download_documents' project.id %}" class="btn btn-sm btn-outline-success">
+                            <i class="fas fa-download"></i> All
+                        </a>
+                    {% endif %}
+                </div>
+                <div class="card-body">
+                    {% if processed_documents %}
+                        {% for document in processed_documents %}
+                            <div class="d-flex justify-content-between align-items-center mb-2 p-2 border rounded">
+                                <div>
+                                    <div class="fw-bold">{{ document.file.name|truncatechars:20 }}</div>
+                                    <small class="text-muted">{{ document.created_at|date:"M d" }}</small>
+                                </div>
+                                <a href="{% url 'download_file' document.id %}" class="btn btn-sm btn-success">
+                                    <i class="fas fa-download"></i>
+                                </a>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <div class="text-center text-muted py-4">
+                            <i class="fas fa-download fa-3x mb-3 opacity-50"></i>
+                            <p>No completed documents</p>
+                            {% if project.status == 'draft' %}
+                                <small>Upload templates to get started</small>
+                            {% elif project.status == 'processing' %}
+                                <small>AI is working on your documents...</small>
+                            {% endif %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card bg-light">
+                <div class="card-body">
+                    <h6 class="mb-3">Quick Actions</h6>
+                    <div class="d-flex flex-wrap gap-2">
+                        {% if project.status == 'draft' %}
+                            <a href="{% url 'upload_documents' project.id %}" class="btn btn-primary">
+                                <i class="fas fa-upload"></i> Upload Documents
+                            </a>
+                        {% elif project.status == 'processing' %}
+                            <a href="{% url 'process_document' project.id %}" class="btn btn-warning">
+                                <i class="fas fa-cogs"></i> View Processing
+                            </a>
+                        {% elif project.status == 'completed' %}
+                            <a href="{% url 'download_documents' project.id %}" class="btn btn-success">
+                                <i class="fas fa-download"></i> Download All
+                            </a>
+                            <a href="{% url 'process_document' project.id %}" class="btn btn-outline-primary">
+                                <i class="fas fa-edit"></i> Edit Content
+                            </a>
+                        {% endif %}
+                        
+                        <button class="btn btn-outline-secondary" onclick="editProject()">
+                            <i class="fas fa-edit"></i> Edit Project
+                        </button>
+                        <button class="btn btn-outline-info" onclick="duplicateProject()">
+                            <i class="fas fa-copy"></i> Duplicate
+                        </button>
+                        <a href="{% url 'project_list' %}" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left"></i> Back to Projects
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Edit Project Modal -->
+<div class="modal fade" id="editProjectModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Edit Project</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form id="editProjectForm">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="editName" class="form-label">Project Name</label>
+                        <input type="text" class="form-control" id="editName" value="{{ project.name }}" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="editDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="editDescription" rows="3">{{ project.description }}</textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Changes</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p id="deleteMessage">Are you sure you want to delete this item?</p>
+                <p class="text-danger small">This action cannot be undone.</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDelete">Delete</button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+let deleteCallback = null;
+
+$(document).ready(function() {
+    // Edit project form
+    $('#editProjectForm').submit(function(e) {
+        e.preventDefault();
+        updateProject();
+    });
+    
+    // Auto-refresh for processing projects
+    if ('{{ project.status }}' === 'processing') {
+        setInterval(checkProjectStatus, 30000); // Check every 30 seconds
+    }
+});
+
+function editProject() {
+    $('#editProjectModal').modal('show');
+}
+
+function updateProject() {
+    const name = $('#editName').val();
+    const description = $('#editDescription').val();
+    
+    $.ajax({
+        url: `/ajax/update-project/`,
+        method: 'POST',
+        data: {
+            'project_id': '{{ project.id }}',
+            'name': name,
+            'description': description,
+            'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        success: function(response) {
+            if (response.success) {
+                $('#editProjectModal').modal('hide');
+                showAlert('Project updated successfully!', 'success');
+                location.reload();
+            } else {
+                showAlert('Error updating project: ' + response.error, 'danger');
+            }
+        },
+        error: function() {
+            showAlert('Error updating project. Please try again.', 'danger');
+        }
+    });
+}
+
+function duplicateProject() {
+    if (confirm('Create a copy of this project?')) {
+        $.ajax({
+            url: `/ajax/duplicate-project/`,
+            method: 'POST',
+            data: {
+                'project_id': '{{ project.id }}',
+                'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
+            },
+            success: function(response) {
+                if (response.success) {
+                    showAlert('Project duplicated successfully!', 'success');
+                    setTimeout(() => {
+                        window.location.href = `/project/${response.project_id}/`;
+                    }, 1500);
+                } else {
+                    showAlert('Error duplicating project: ' + response.error, 'danger');
+                }
+            },
+            error: function() {
+                showAlert('Error duplicating project. Please try again.', 'danger');
+            }
+        });
+    }
+}
+
+function downloadFile(type, id) {
+    window.location.href = `/download/${type}/${id}/`;
+}
+
+function deleteFile(type, id) {
+    const fileType = type === 'template' ? 'template' : 'reference document';
+    $('#deleteMessage').text(`Are you sure you want to delete this ${fileType}?`);
+    
+    deleteCallback = function() {
+        $.ajax({
+            url: `/ajax/delete-${type}/`,
+            method: 'POST',
+            data: {
+                [`${type}_id`]: id,
+                'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
+            },
+            success: function(response) {
+                if (response.success) {
+                    showAlert(`${fileType.charAt(0).toUpperCase() + fileType.slice(1)} deleted successfully!`, 'success');
+                    location.reload();
+                } else {
+                    showAlert(`Error deleting ${fileType}: ` + response.error, 'danger');
+                }
+            },
+            error: function() {
+                showAlert(`Error deleting ${fileType}. Please try again.`, 'danger');
+            }
+        });
+    };
+    
+    $('#deleteModal').modal('show');
+}
+
+function checkProjectStatus() {
+    $.ajax({
+        url: `/ajax/project-status/{{ project.id }}/`,
+        method: 'GET',
+        success: function(response) {
+            if (response.status !== '{{ project.status }}') {
+                location.reload();
+            }
+        }
+    });
+}
+
+function showAlert(message, type) {
+    const alert = $(`
+        <div class="alert alert-${type} alert-dismissible fade show position-fixed" 
+             style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `);
+    
+    $('body').append(alert);
+    setTimeout(() => alert.alert('close'), 5000);
+}
+
+// Modal event handlers
+$('#confirmDelete').click(function() {
+    if (deleteCallback) {
+        deleteCallback();
+        $('#deleteModal').modal('hide');
+        deleteCallback = null;
+    }
+});
+</script>
+
+<style>
+.opacity-50 {
+    opacity: 0.5;
+}
+
+.fs-6 {
+    font-size: 1.25rem;
+}
+
+.card {
+    box-shadow: 0 0.125rem 0.25rem rgba(0, 0, 0, 0.075);
+    border: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.card-header {
+    background-color: #f8f9fa;
+    border-bottom: 1px solid rgba(0, 0, 0, 0.125);
+}
+
+.badge {
+    font-size: 0.875em;
+}
+
+@media (max-width: 768px) {
+    .d-flex.gap-2 {
+        flex-direction: column;
+    }
+    
+    .d-flex.gap-2 .btn {
+        margin-bottom: 0.5rem;
+    }
+}
+</style>
+{% endblock %}

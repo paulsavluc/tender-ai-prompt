@@ -1,0 +1,951 @@
+<!-- templates/project_list.html -->
+{% extends 'base.html' %}
+{% load file_filters %}
+
+{% block title %}Tender Projects Dashboard{% endblock %}
+
+{% block content %}
+<div class="row">
+    <div class="col-12">
+        <div class="d-flex justify-content-between align-items-center mb-4">
+            <div>
+                <h2><i class="fas fa-briefcase"></i> Tender Projects Dashboard</h2>
+                <p class="text-muted mb-0">Manage your AI-powered tender response projects</p>
+            </div>
+            <div>
+                <a href="{% url 'create_project' %}" class="btn btn-primary btn-lg">
+                    <i class="fas fa-plus"></i> New Project
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Statistics Cards -->
+<div class="row mb-4">
+    <div class="col-md-3">
+        <div class="card bg-primary text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-1">{{ projects.count }}</h4>
+                        <p class="mb-0">Total Projects</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-folder fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-success text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-1">
+                            {% for project in projects %}
+                                {% if project.status == 'completed' %}{{ forloop.counter0|add:1 }}{% endif %}
+                            {% empty %}0{% endfor %}
+                        </h4>
+                        <p class="mb-0">Completed</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-check-circle fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-warning text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-1">
+                            {% for project in projects %}
+                                {% if project.status == 'processing' %}{{ forloop.counter0|add:1 }}{% endif %}
+                            {% empty %}0{% endfor %}
+                        </h4>
+                        <p class="mb-0">In Progress</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-clock fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card bg-info text-white">
+            <div class="card-body">
+                <div class="d-flex justify-content-between">
+                    <div>
+                        <h4 class="mb-1">
+                            {% for project in projects %}
+                                {% if project.status == 'draft' %}{{ forloop.counter0|add:1 }}{% endif %}
+                            {% empty %}0{% endfor %}
+                        </h4>
+                        <p class="mb-0">Draft</p>
+                    </div>
+                    <div class="align-self-center">
+                        <i class="fas fa-edit fa-2x opacity-75"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters and Search -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-body">
+                <form method="get" id="filterForm">
+                    <div class="row align-items-end">
+                        <div class="col-md-4">
+                            <label for="search" class="form-label">Search Projects</label>
+                            <div class="input-group">
+                                <span class="input-group-text">
+                                    <i class="fas fa-search"></i>
+                                </span>
+                                <input type="text" class="form-control" id="search" name="search" 
+                                       placeholder="Search by name or description..." 
+                                       value="{{ request.GET.search }}">
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="status" class="form-label">Status</label>
+                            <select class="form-select" id="status" name="status">
+                                <option value="">All Status</option>
+                                <option value="draft" {% if request.GET.status == 'draft' %}selected{% endif %}>Draft</option>
+                                <option value="processing" {% if request.GET.status == 'processing' %}selected{% endif %}>Processing</option>
+                                <option value="completed" {% if request.GET.status == 'completed' %}selected{% endif %}>Completed</option>
+                                <option value="error" {% if request.GET.status == 'error' %}selected{% endif %}>Error</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="sort" class="form-label">Sort By</label>
+                            <select class="form-select" id="sort" name="sort">
+                                <option value="-created_at" {% if request.GET.sort == '-created_at' %}selected{% endif %}>Newest First</option>
+                                <option value="created_at" {% if request.GET.sort == 'created_at' %}selected{% endif %}>Oldest First</option>
+                                <option value="name" {% if request.GET.sort == 'name' %}selected{% endif %}>Name A-Z</option>
+                                <option value="-name" {% if request.GET.sort == '-name' %}selected{% endif %}>Name Z-A</option>
+                                <option value="-updated_at" {% if request.GET.sort == '-updated_at' %}selected{% endif %}>Recently Updated</option>
+                            </select>
+                        </div>
+                        <div class="col-md-2">
+                            <label for="view" class="form-label">View</label>
+                            <div class="btn-group w-100" role="group">
+                                <input type="radio" class="btn-check" name="view" id="cardView" value="card" 
+                                       {% if request.GET.view != 'table' %}checked{% endif %}>
+                                <label class="btn btn-outline-secondary" for="cardView">
+                                    <i class="fas fa-th-large"></i>
+                                </label>
+                                <input type="radio" class="btn-check" name="view" id="tableView" value="table"
+                                       {% if request.GET.view == 'table' %}checked{% endif %}>
+                                <label class="btn btn-outline-secondary" for="tableView">
+                                    <i class="fas fa-list"></i>
+                                </label>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <button type="submit" class="btn btn-primary w-100">
+                                <i class="fas fa-filter"></i> Filter
+                            </button>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Projects Display -->
+{% if projects %}
+    <!-- Card View -->
+    <div id="cardViewContent" {% if request.GET.view == 'table' %}class="d-none"{% endif %}>
+        <div class="row">
+            {% for project in projects %}
+                <div class="col-md-6 col-lg-4 mb-4">
+                    <div class="card h-100 project-card" data-project-id="{{ project.id }}">
+                        <div class="card-header d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0 text-truncate me-2">{{ project.name }}</h6>
+                            <div class="dropdown">
+                                <button class="btn btn-sm btn-outline-secondary" type="button" 
+                                        data-bs-toggle="dropdown">
+                                    <i class="fas fa-ellipsis-v"></i>
+                                </button>
+                                <ul class="dropdown-menu">
+                                    <li><a class="dropdown-item" href="{% url 'project_detail' project.id %}">
+                                        <i class="fas fa-eye"></i> View Details
+                                    </a></li>
+                                    <li><a class="dropdown-item" href="{% url 'upload_documents' project.id %}">
+                                        <i class="fas fa-upload"></i> Upload Documents
+                                    </a></li>
+                                    {% if project.status == 'completed' %}
+                                        <li><a class="dropdown-item" href="{% url 'download_documents' project.id %}">
+                                            <i class="fas fa-download"></i> Download
+                                        </a></li>
+                                    {% endif %}
+                                    <li><hr class="dropdown-divider"></li>
+                                    <li><a class="dropdown-item text-warning" href="#" 
+                                           onclick="duplicateProject('{{ project.id }}')">
+                                        <i class="fas fa-copy"></i> Duplicate
+                                    </a></li>
+                                    <li><a class="dropdown-item text-danger" href="#" 
+                                           onclick="deleteProject('{{ project.id }}', '{{ project.name }}')">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </a></li>
+                                </ul>
+                            </div>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                {% if project.status == 'draft' %}
+                                    <span class="badge bg-secondary">
+                                        <i class="fas fa-edit"></i> Draft
+                                    </span>
+                                {% elif project.status == 'processing' %}
+                                    <span class="badge bg-warning">
+                                        <i class="fas fa-clock"></i> Processing
+                                    </span>
+                                {% elif project.status == 'completed' %}
+                                    <span class="badge bg-success">
+                                        <i class="fas fa-check-circle"></i> Completed
+                                    </span>
+                                {% elif project.status == 'error' %}
+                                    <span class="badge bg-danger">
+                                        <i class="fas fa-exclamation-triangle"></i> Error
+                                    </span>
+                                {% endif %}
+                            </div>
+                            
+                            {% if project.description %}
+                                <p class="card-text text-muted small">{{ project.description|truncatechars:100 }}</p>
+                            {% endif %}
+                            
+                            <div class="row text-center small text-muted mb-3">
+                                <div class="col-4">
+                                    <i class="fas fa-file-alt"></i><br>
+                                    <strong>{{ project.tendertemplate_set.count }}</strong><br>
+                                    Templates
+                                </div>
+                                <div class="col-4">
+                                    <i class="fas fa-book"></i><br>
+                                    <strong>{{ project.referencedocument_set.count }}</strong><br>
+                                    References
+                                </div>
+                                <div class="col-4">
+                                    <i class="fas fa-download"></i><br>
+                                    <strong>{{ project.processeddocument_set.count }}</strong><br>
+                                    Completed
+                                </div>
+                            </div>
+                            
+                            <div class="small text-muted">
+                                <div class="d-flex justify-content-between">
+                                    <span><i class="fas fa-calendar"></i> Created: {{ project.created_at|date:"M d, Y" }}</span>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span><i class="fas fa-clock"></i> Updated: {{ project.updated_at|timesince }} ago</span>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="card-footer bg-transparent">
+                            <div class="d-grid gap-2">
+                                {% if project.status == 'draft' %}
+                                    <a href="{% url 'upload_documents' project.id %}" class="btn btn-primary btn-sm">
+                                        <i class="fas fa-upload"></i> Upload Documents
+                                    </a>
+                                {% elif project.status == 'processing' %}
+                                    <a href="{% url 'process_document' project.id %}" class="btn btn-warning btn-sm">
+                                        <i class="fas fa-cogs"></i> Continue Processing
+                                    </a>
+                                {% elif project.status == 'completed' %}
+                                    <a href="{% url 'download_documents' project.id %}" class="btn btn-success btn-sm">
+                                        <i class="fas fa-download"></i> Download Documents
+                                    </a>
+                                {% elif project.status == 'error' %}
+                                    <a href="{% url 'process_document' project.id %}" class="btn btn-danger btn-sm">
+                                        <i class="fas fa-exclamation-triangle"></i> Fix Errors
+                                    </a>
+                                {% endif %}
+                                <a href="{% url 'project_detail' project.id %}" class="btn btn-outline-secondary btn-sm">
+                                    <i class="fas fa-eye"></i> View Details
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Table View -->
+    <div id="tableViewContent" {% if request.GET.view != 'table' %}class="d-none"{% endif %}>
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Project Name</th>
+                                <th>Status</th>
+                                <th>Templates</th>
+                                <th>References</th>
+                                <th>Completed</th>
+                                <th>Created</th>
+                                <th>Updated</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for project in projects %}
+                                <tr class="project-row" data-project-id="{{ project.id }}">
+                                    <td>
+                                        <div>
+                                            <strong>{{ project.name }}</strong>
+                                            {% if project.description %}
+                                                <br><small class="text-muted">{{ project.description|truncatechars:60 }}</small>
+                                            {% endif %}
+                                        </div>
+                                    </td>
+                                    <td>
+                                        {% if project.status == 'draft' %}
+                                            <span class="badge bg-secondary">Draft</span>
+                                        {% elif project.status == 'processing' %}
+                                            <span class="badge bg-warning">Processing</span>
+                                        {% elif project.status == 'completed' %}
+                                            <span class="badge bg-success">Completed</span>
+                                        {% elif project.status == 'error' %}
+                                            <span class="badge bg-danger">Error</span>
+                                        {% endif %}
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-primary">{{ project.tendertemplate_set.count }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-info">{{ project.referencedocument_set.count }}</span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-success">{{ project.processeddocument_set.count }}</span>
+                                    </td>
+                                    <td>
+                                        <small>{{ project.created_at|date:"M d, Y" }}</small>
+                                    </td>
+                                    <td>
+                                        <small>{{ project.updated_at|timesince }} ago</small>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group" role="group">
+                                            <a href="{% url 'project_detail' project.id %}" 
+                                               class="btn btn-sm btn-outline-primary" title="View Details">
+                                                <i class="fas fa-eye"></i>
+                                            </a>
+                                            {% if project.status == 'draft' %}
+                                                <a href="{% url 'upload_documents' project.id %}" 
+                                                   class="btn btn-sm btn-outline-success" title="Upload Documents">
+                                                    <i class="fas fa-upload"></i>
+                                                </a>
+                                            {% elif project.status == 'processing' %}
+                                                <a href="{% url 'process_document' project.id %}" 
+                                                   class="btn btn-sm btn-outline-warning" title="Continue Processing">
+                                                    <i class="fas fa-cogs"></i>
+                                                </a>
+                                            {% elif project.status == 'completed' %}
+                                                <a href="{% url 'download_documents' project.id %}" 
+                                                   class="btn btn-sm btn-outline-success" title="Download">
+                                                    <i class="fas fa-download"></i>
+                                                </a>
+                                            {% endif %}
+                                            <div class="btn-group" role="group">
+                                                <button type="button" class="btn btn-sm btn-outline-secondary dropdown-toggle" 
+                                                        data-bs-toggle="dropdown" title="More Actions">
+                                                    <i class="fas fa-ellipsis-h"></i>
+                                                </button>
+                                                <ul class="dropdown-menu">
+                                                    <li><a class="dropdown-item" href="#" 
+                                                           onclick="duplicateProject('{{ project.id }}')">
+                                                        <i class="fas fa-copy"></i> Duplicate
+                                                    </a></li>
+                                                    <li><a class="dropdown-item text-danger" href="#" 
+                                                           onclick="deleteProject('{{ project.id }}', '{{ project.name }}')">
+                                                        <i class="fas fa-trash"></i> Delete
+                                                    </a></li>
+                                                </ul>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Pagination -->
+    {% if projects.has_other_pages %}
+        <div class="row mt-4">
+            <div class="col-12">
+                <nav aria-label="Projects pagination">
+                    <ul class="pagination justify-content-center">
+                        {% if projects.has_previous %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.view %}&view={{ request.GET.view }}{% endif %}">First</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ projects.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.view %}&view={{ request.GET.view }}{% endif %}">Previous</a>
+                            </li>
+                        {% endif %}
+
+                        {% for num in projects.paginator.page_range %}
+                            {% if projects.number == num %}
+                                <li class="page-item active">
+                                    <span class="page-link">{{ num }}</span>
+                                </li>
+                            {% elif num > projects.number|add:'-3' and num < projects.number|add:'3' %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ num }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.view %}&view={{ request.GET.view }}{% endif %}">{{ num }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+
+                        {% if projects.has_next %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ projects.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.view %}&view={{ request.GET.view }}{% endif %}">Next</a>
+                            </li>
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ projects.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.status %}&status={{ request.GET.status }}{% endif %}{% if request.GET.sort %}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.view %}&view={{ request.GET.view }}{% endif %}">Last</a>
+                            </li>
+                        {% endif %}
+                    </ul>
+                </nav>
+            </div>
+        </div>
+    {% endif %}
+
+{% else %}
+    <!-- Empty State -->
+    <div class="row">
+        <div class="col-12">
+            <div class="card text-center">
+                <div class="card-body py-5">
+                    <i class="fas fa-folder-open fa-5x text-muted mb-4"></i>
+                    <h4>No Projects Found</h4>
+                    {% if request.GET.search or request.GET.status %}
+                        <p class="text-muted mb-4">No projects match your current filters. Try adjusting your search criteria.</p>
+                        <a href="{% url 'project_list' %}" class="btn btn-secondary me-2">
+                            <i class="fas fa-times"></i> Clear Filters
+                        </a>
+                    {% else %}
+                        <p class="text-muted mb-4">You haven't created any tender projects yet. Get started by creating your first project!</p>
+                    {% endif %}
+                    <a href="{% url 'create_project' %}" class="btn btn-primary btn-lg">
+                        <i class="fas fa-plus"></i> Create Your First Project
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+{% endif %}
+
+<!-- Quick Actions Floating Button -->
+<div class="position-fixed bottom-0 end-0 p-3" style="z-index: 1000;">
+    <div class="btn-group-vertical" role="group">
+        <button type="button" class="btn btn-primary btn-sm mb-2" data-bs-toggle="modal" data-bs-target="#quickCreateModal">
+            <i class="fas fa-plus"></i>
+        </button>
+        <button type="button" class="btn btn-secondary btn-sm mb-2" onclick="scrollToTop()">
+            <i class="fas fa-arrow-up"></i>
+        </button>
+        <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#helpModal">
+            <i class="fas fa-question"></i>
+        </button>
+    </div>
+</div>
+
+<!-- Quick Create Modal -->
+<div class="modal fade" id="quickCreateModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Quick Create Project</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'create_project' %}" id="quickCreateForm">
+                <div class="modal-body">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label for="quickName" class="form-label">Project Name</label>
+                        <input type="text" class="form-control" id="quickName" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="quickDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="quickDescription" name="description" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Project</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- Help Modal -->
+<div class="modal fade" id="helpModal" tabindex="-1">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">How to Use the Tender Tool</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-play-circle text-primary"></i> Getting Started</h6>
+                        <ol class="small">
+                            <li>Create a new project</li>
+                            <li>Upload tender templates (Word, PDF, Excel)</li>
+                            <li>Upload reference documents</li>
+                            <li>Generate AI responses</li>
+                            <li>Review and edit content</li>
+                            <li>Download completed documents</li>
+                        </ol>
+                    </div>
+                    <div class="col-md-6">
+                        <h6><i class="fas fa-lightbulb text-warning"></i> Tips & Tricks</h6>
+                        <ul class="small">
+                            <li>Use descriptive project names</li>
+                            <li>Upload multiple reference documents for better AI responses</li>
+                            <li>Review generated content before finalizing</li>
+                            <li>Keep projects organized by client or deadline</li>
+                        </ul>
+                    </div>
+                </div>
+                <hr>
+                <div class="text-center">
+                    <h6><i class="fas fa-keyboard text-info"></i> Keyboard Shortcuts</h6>
+                    <div class="row small">
+                        <div class="col-6">
+                            <kbd>Ctrl</kbd> + <kbd>N</kbd> - New Project
+                        </div>
+                        <div class="col-6">
+                            <kbd>Ctrl</kbd> + <kbd>F</kbd> - Search Projects
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title text-danger">
+                    <i class="fas fa-exclamation-triangle"></i> Confirm Deletion
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Are you sure you want to delete the project "<strong id="deleteProjectName"></strong>"?</p>
+                <p class="text-danger small">
+                    <i class="fas fa-warning"></i> This action cannot be undone. All associated documents and data will be permanently deleted.
+                </p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                <button type="button" class="btn btn-danger" id="confirmDelete">
+                    <i class="fas fa-trash"></i> Delete Project
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+$(document).ready(function() {
+    let deleteProjectId = null;
+    
+    // Auto-submit filter form on change
+    $('#filterForm select, #filterForm input[type="radio"]').change(function() {
+        $('#filterForm').submit();
+    });
+    
+    // Search with debounce
+    let searchTimeout;
+    $('#search').on('input', function() {
+        clearTimeout(searchTimeout);
+        searchTimeout = setTimeout(function() {
+            $('#filterForm').submit();
+        }, 500);
+    });
+    
+    // View toggle
+    $('input[name="view"]').change(function() {
+        if ($(this).val() === 'card') {
+            $('#cardViewContent').removeClass('d-none');
+            $('#tableViewContent').addClass('d-none');
+        } else {
+            $('#cardViewContent').addClass('d-none');
+            $('#tableViewContent').removeClass('d-none');
+        }
+    });
+    
+    // Project card hover effects
+    $('.project-card').hover(
+        function() {
+            $(this).addClass('shadow-lg').css('transform', 'translateY(-5px)');
+        },
+        function() {
+            $(this).removeClass('shadow-lg').css('transform', 'translateY(0)');
+        }
+    );
+    
+       // Table row click to view details
+       $('.project-row').click(function(e) {
+        if (!$(e.target).closest('button, a, .dropdown').length) {
+            const projectId = $(this).data('project-id');
+            window.location.href = `/project/${projectId}/`;
+        }
+    });
+    
+    // Keyboard shortcuts
+    $(document).keydown(function(e) {
+        // Ctrl+N for new project
+        if ((e.ctrlKey || e.metaKey) && e.keyCode === 78) {
+            e.preventDefault();
+            $('#quickCreateModal').modal('show');
+        }
+        
+        // Ctrl+F for search
+        if ((e.ctrlKey || e.metaKey) && e.keyCode === 70) {
+            e.preventDefault();
+            $('#search').focus();
+        }
+        
+        // Escape to clear search
+        if (e.keyCode === 27 && $('#search').is(':focus')) {
+            $('#search').val('').trigger('input');
+        }
+    });
+    
+    // Auto-refresh for processing projects
+    const processingProjects = $('.badge:contains("Processing")').length;
+    if (processingProjects > 0) {
+        setInterval(function() {
+            // Check status of processing projects
+            checkProcessingStatus();
+        }, 30000); // Check every 30 seconds
+    }
+    
+    // Confirm delete modal
+    $('#confirmDelete').click(function() {
+        if (deleteProjectId) {
+            deleteProjectConfirmed(deleteProjectId);
+        }
+    });
+    
+    // Initialize tooltips
+    $('[title]').tooltip();
+    
+    // Auto-hide alerts
+    $('.alert').delay(5000).fadeOut();
+});
+
+// Global functions
+function duplicateProject(projectId) {
+    if (confirm('Create a copy of this project?')) {
+        $.ajax({
+            url: `/ajax/duplicate-project/`,
+            method: 'POST',
+            data: {
+                'project_id': projectId,
+                'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
+            },
+            success: function(response) {
+                if (response.success) {
+                    showNotification('Project duplicated successfully!', 'success');
+                    setTimeout(() => location.reload(), 1500);
+                } else {
+                    showNotification('Error duplicating project: ' + response.error, 'error');
+                }
+            },
+            error: function() {
+                showNotification('Error duplicating project. Please try again.', 'error');
+            }
+        });
+    }
+}
+
+function deleteProject(projectId, projectName) {
+    deleteProjectId = projectId;
+    $('#deleteProjectName').text(projectName);
+    $('#deleteModal').modal('show');
+}
+
+function deleteProjectConfirmed(projectId) {
+    $('#deleteModal').modal('hide');
+    
+    $.ajax({
+        url: `/ajax/delete-project/`,
+        method: 'POST',
+        data: {
+            'project_id': projectId,
+            'csrfmiddlewaretoken': $('[name=csrfmiddlewaretoken]').val()
+        },
+        success: function(response) {
+            if (response.success) {
+                showNotification('Project deleted successfully!', 'success');
+                // Remove the project card/row from DOM
+                $(`.project-card[data-project-id="${projectId}"], .project-row[data-project-id="${projectId}"]`).fadeOut(500, function() {
+                    $(this).remove();
+                    updateStatistics();
+                });
+            } else {
+                showNotification('Error deleting project: ' + response.error, 'error');
+            }
+        },
+        error: function() {
+            showNotification('Error deleting project. Please try again.', 'error');
+        }
+    });
+}
+
+function checkProcessingStatus() {
+    const processingCards = $('.badge:contains("Processing")').closest('.project-card, .project-row');
+    
+    processingCards.each(function() {
+        const projectId = $(this).data('project-id');
+        
+        $.ajax({
+            url: `/ajax/project-status/${projectId}/`,
+            method: 'GET',
+            success: function(response) {
+                if (response.status !== 'processing') {
+                    // Update the status badge and actions
+                    updateProjectStatus(projectId, response.status);
+                }
+            }
+        });
+    });
+}
+
+function updateProjectStatus(projectId, newStatus) {
+    const projectElement = $(`.project-card[data-project-id="${projectId}"], .project-row[data-project-id="${projectId}"]`);
+    
+    // Update badge
+    let badgeClass = 'bg-secondary';
+    let badgeText = 'Draft';
+    let badgeIcon = 'fas fa-edit';
+    
+    switch(newStatus) {
+        case 'completed':
+            badgeClass = 'bg-success';
+            badgeText = 'Completed';
+            badgeIcon = 'fas fa-check-circle';
+            break;
+        case 'error':
+            badgeClass = 'bg-danger';
+            badgeText = 'Error';
+            badgeIcon = 'fas fa-exclamation-triangle';
+            break;
+    }
+    
+    projectElement.find('.badge').removeClass().addClass(`badge ${badgeClass}`)
+        .html(`<i class="${badgeIcon}"></i> ${badgeText}`);
+    
+    // Update action buttons if needed
+    if (newStatus === 'completed') {
+        const actionButton = projectElement.find('.card-footer .btn-warning, .btn-group .btn-outline-warning');
+        actionButton.removeClass('btn-warning btn-outline-warning')
+                   .addClass('btn-success btn-outline-success')
+                   .html('<i class="fas fa-download"></i> Download Documents')
+                   .attr('href', `/project/${projectId}/download/`);
+    }
+    
+    showNotification(`Project status updated to ${badgeText}`, 'info');
+    updateStatistics();
+}
+
+function updateStatistics() {
+    // Recalculate and update the statistics cards
+    const totalProjects = $('.project-card, .project-row').length;
+    const completedProjects = $('.badge:contains("Completed")').length;
+    const processingProjects = $('.badge:contains("Processing")').length;
+    const draftProjects = $('.badge:contains("Draft")').length;
+    
+    // Update the statistics cards
+    $('.bg-primary .card-body h4').text(totalProjects);
+    $('.bg-success .card-body h4').text(completedProjects);
+    $('.bg-warning .card-body h4').text(processingProjects);
+    $('.bg-info .card-body h4').text(draftProjects);
+}
+
+function scrollToTop() {
+    $('html, body').animate({scrollTop: 0}, 500);
+}
+
+function showNotification(message, type) {
+    const alertClass = type === 'error' ? 'alert-danger' : 
+                      type === 'success' ? 'alert-success' : 
+                      type === 'warning' ? 'alert-warning' : 'alert-info';
+    
+    const notification = $(`
+        <div class="alert ${alertClass} alert-dismissible fade show position-fixed" 
+             style="top: 20px; right: 20px; z-index: 9999; min-width: 300px;">
+            ${message}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    `);
+    
+    $('body').append(notification);
+    
+    setTimeout(function() {
+        notification.alert('close');
+    }, 5000);
+}
+
+// Export functionality
+function exportProjects(format) {
+    window.location.href = `/export/projects/?format=${format}`;
+}
+
+// Bulk actions
+function selectAllProjects() {
+    $('.project-checkbox').prop('checked', true);
+    updateBulkActions();
+}
+
+function deselectAllProjects() {
+    $('.project-checkbox').prop('checked', false);
+    updateBulkActions();
+}
+
+function updateBulkActions() {
+    const selectedCount = $('.project-checkbox:checked').length;
+    if (selectedCount > 0) {
+        $('#bulkActions').removeClass('d-none');
+        $('#selectedCount').text(selectedCount);
+    } else {
+        $('#bulkActions').addClass('d-none');
+    }
+}
+
+// Advanced search
+function showAdvancedSearch() {
+    $('#advancedSearchModal').modal('show');
+}
+
+// Project templates
+function createFromTemplate(templateId) {
+    window.location.href = `/create-from-template/${templateId}/`;
+}
+</script>
+
+<style>
+.project-card {
+    transition: all 0.3s ease;
+    cursor: pointer;
+}
+
+.project-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+}
+
+.project-row {
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.project-row:hover {
+    background-color: rgba(0,123,255,0.1);
+}
+
+.badge {
+    font-size: 0.75em;
+}
+
+.position-fixed .btn-group-vertical .btn {
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
+.statistics-card {
+    border: none;
+    border-radius: 15px;
+}
+
+.search-highlight {
+    background-color: yellow;
+    padding: 2px 4px;
+    border-radius: 3px;
+}
+
+@media (max-width: 768px) {
+    .project-card {
+        margin-bottom: 1rem;
+    }
+    
+    .btn-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .btn-group .btn {
+        border-radius: 0.375rem !important;
+    }
+    
+    .position-fixed {
+        bottom: 20px !important;
+        right: 20px !important;
+    }
+}
+
+.empty-state {
+    padding: 4rem 2rem;
+}
+
+.loading-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(255,255,255,0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+}
+
+.project-progress {
+    height: 4px;
+    background: #e9ecef;
+    border-radius: 2px;
+    overflow: hidden;
+    margin-top: 0.5rem;
+}
+
+.project-progress-bar {
+    height: 100%;
+    background: linear-gradient(90deg, #007bff, #28a745);
+    transition: width 0.3s ease;
+}
+</style>
+{% endblock %}
+
